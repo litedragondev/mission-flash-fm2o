@@ -1153,6 +1153,10 @@ class MacroApp:
                         if loop_mode == "Avec confirmation":
                             # Mode boucle infinie avec confirmation
                             while True:
+                                # Demander à l'utilisateur s'il veut lancer/relancer la boucle
+                                if not self.show_loop_confirmation():
+                                    break
+                                    
                                 # Exécuter les étapes de la boucle
                                 for prev_step in macro_data["steps"][loop_start_index:-1]:
                                     if prev_step["action"] == "Début de boucle" or not prev_step.get("enabled", True):
@@ -1167,10 +1171,6 @@ class MacroApp:
                                         self.show_wait_dialog(prev_step_delay)
                                     else:
                                         time.sleep(prev_step_delay)
-                                
-                                # Demander à l'utilisateur s'il veut continuer
-                                if not self.show_loop_confirmation():
-                                    break
                         else:
                             # Mode boucle fixe
                             for loop_iteration in range(loop_count - 1):
@@ -1524,6 +1524,10 @@ class MacroApp:
                         if loop_mode == "Avec confirmation":
                             # Mode boucle infinie avec confirmation
                             while True:
+                                # Demander à l'utilisateur s'il veut lancer/relancer la boucle
+                                if not self.show_loop_confirmation():
+                                    break
+                                    
                                 # Exécuter les étapes de la boucle
                                 for prev_step in macro_data["steps"][loop_start_index:-1]:
                                     if prev_step["action"] == "Début de boucle" or not prev_step.get("enabled", True):
@@ -1538,10 +1542,6 @@ class MacroApp:
                                         self.show_wait_dialog(prev_step_delay)
                                     else:
                                         time.sleep(prev_step_delay)
-                                
-                                # Demander à l'utilisateur s'il veut continuer
-                                if not self.show_loop_confirmation():
-                                    break
                         else:
                             # Mode boucle fixe
                             for loop_iteration in range(loop_count - 1):
