@@ -189,7 +189,7 @@ class MacroApp:
         # Version label at bottom
         version_frame = tk.Frame(self.root, bg="#f0f0f0")
         version_frame.pack(fill='x', side='bottom', padx=5, pady=2)
-        tk.Label(version_frame, text="v10.2.0 𝘗𝘳𝘦𝘷𝘦𝘳𝘴𝘪𝘰𝘯", bg="#f0f0f0", fg="#666", font=("Arial Bold", 8)).pack(side='right')
+        tk.Label(version_frame, text="v10.4.0 𝘗𝘳𝘦𝘷𝘦𝘳𝘴𝘪𝘰𝘯", bg="#f0f0f0", fg="#666", font=("Arial Bold", 8)).pack(side='right')
 
         # S'assurer que la souris est débloquée à la fermeture
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -581,11 +581,6 @@ class MacroApp:
             json.dump(self.macros, f, indent=2)
             
     def add_step(self):
-        # Vérifier si une boucle existe déjà
-        has_loop = any(step["action_var"].get() == "Boucle" for step in self.macro_steps)
-        if has_loop:
-            self.show_topmost_messagebox("warning", "Attention", "Une boucle ne peut être ajoutée qu'à la fin et il ne peut y en avoir qu'une seule.")
-            return
             
         step_frame = tk.Frame(self.steps_frame, relief=tk.RAISED, bd=1)
         step_frame.pack(fill='x', pady=5, padx=5)
@@ -602,7 +597,16 @@ class MacroApp:
                                          font=("Arial", 9))
         enabled_checkbox.pack(side=tk.LEFT, padx=(10, 0))
         
-        tk.Button(header, text="X", command=lambda: self.remove_step(step_frame), bg="red", fg="white", width=3).pack(side=tk.RIGHT)
+        # Boutons de déplacement et suppression
+        button_container = tk.Frame(header)
+        button_container.pack(side=tk.RIGHT)
+        
+        tk.Button(button_container, text="↑", command=lambda: self.move_step_up_individual(step_data), 
+                 bg="gray", fg="white", font=("Arial", 8, "bold"), width=2).pack(side=tk.LEFT, padx=1)
+        tk.Button(button_container, text="↓", command=lambda: self.move_step_down_individual(step_data), 
+                 bg="gray", fg="white", font=("Arial", 8, "bold"), width=2).pack(side=tk.LEFT, padx=1)
+        tk.Button(button_container, text="X", command=lambda: self.remove_step(step_frame), 
+                 bg="red", fg="white", width=2).pack(side=tk.LEFT, padx=1)
         
         # Zone de texte pour le label de l'étape
         label_frame = tk.Frame(step_frame)
@@ -638,9 +642,7 @@ class MacroApp:
         
 
         
-        # Si c'est une boucle, la déplacer à la fin
-        if step_data["action_var"].get() == "Boucle":
-            self.move_step_to_end(step_data)
+
         
     def update_step_options(self, step_data):
         # Nettoyer les options précédentes
@@ -732,37 +734,44 @@ class MacroApp:
             loop_mode_combo = ttk.Combobox(step_data["options_frame"], textvariable=step_data["loop_mode"], values=["Fixe", "Avec confirmation"], state="readonly", width=15)
             loop_mode_combo.pack(side=tk.LEFT, padx=5)
 
-            # Désactiver le bouton d'ajout d'étape si c'est une boucle
-            self.disable_add_step_button()
 
-    def disable_add_step_button(self):
-        """Désactive le bouton d'ajout d'étape quand une boucle existe"""
-        for widget in self.nouveau_frame.winfo_children():
-            if isinstance(widget, tk.Frame):
-                for child in widget.winfo_children():
-                    if isinstance(child, tk.Frame):
-                        for button in child.winfo_children():
-                            if isinstance(button, tk.Button) and button.cget("text") == "Ajouter une étape":
-                                button.config(state="disabled")
 
-    def enable_add_step_button(self):
-        """Réactive le bouton d'ajout d'étape"""
-        for widget in self.nouveau_frame.winfo_children():
-            if isinstance(widget, tk.Frame):
-                for child in widget.winfo_children():
-                    if isinstance(child, tk.Frame):
-                        for button in child.winfo_children():
-                            if isinstance(button, tk.Button) and button.cget("text") == "Ajouter une étape":
-                                button.config(state="normal")
 
-    def move_step_to_end(self, step_data):
-        """Déplace une étape à la fin de la liste"""
-        if step_data in self.macro_steps:
-            self.macro_steps.remove(step_data)
-            self.macro_steps.append(step_data)
-            step_data["frame"].pack_forget()
-            step_data["frame"].pack(fill='x', pady=5, padx=0)
-            self.renumber_steps()
+
+    def move_step_up_individual(self, step_data):
+        """Déplace une étape spécifique vers le haut"""
+        try:
+            current_index = self.macro_steps.index(step_data)
+            if current_index > 0:
+                self.macro_steps[current_index], self.macro_steps[current_index - 1] = \
+                    self.macro_steps[current_index - 1], self.macro_steps[current_index]
+                self.refresh_steps_display()
+        except ValueError:
+            pass
+    
+    def move_step_down_individual(self, step_data):
+        """Déplace une étape spécifique vers le bas"""
+        try:
+            current_index = self.macro_steps.index(step_data)
+            if current_index < len(self.macro_steps) - 1:
+                self.macro_steps[current_index], self.macro_steps[current_index + 1] = \
+                    self.macro_steps[current_index + 1], self.macro_steps[current_index]
+                self.refresh_steps_display()
+        except ValueError:
+            pass
+    
+    def refresh_steps_display(self):
+        """Rafraîchit l'affichage des étapes dans l'ordre correct"""
+        # Supprimer tous les frames de l'affichage
+        for step in self.macro_steps:
+            step["frame"].pack_forget()
+        
+        # Les remettre dans le bon ordre
+        for step in self.macro_steps:
+            step["frame"].pack(fill='x', pady=5, padx=5)
+        
+        # Renuméroter
+        self.renumber_steps()
 
     def validate_step_variable_fields(self, step_data):
         """Valide que le champ Variable est rempli pour l'action Saisir valeur"""
@@ -836,9 +845,7 @@ class MacroApp:
         step_frame.destroy()
         self.renumber_steps()
 
-        # Si on supprime une boucle, réactiver le bouton d'ajout
-        if removed_step and removed_step["action_var"].get() == "Boucle":
-            self.enable_add_step_button()
+
             
 
 
@@ -851,7 +858,7 @@ class MacroApp:
         for step in self.macro_steps:
             step["frame"].destroy()
         self.macro_steps = []
-        self.enable_add_step_button()
+
         
 
 
@@ -2408,47 +2415,3 @@ UTILISATION:
 if __name__ == "__main__":
     app = MacroApp()
     app.root.mainloop()
-    def show_loop_confirmation(self):
-        """Affiche une boîte de dialogue de confirmation pour continuer la boucle"""
-        result = [False]
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Confirmation de boucle")
-        dialog.geometry("400x200")
-        dialog.resizable(False, False)
-        dialog.configure(bg="#f0f0f0")
-        dialog.transient(self.root)
-        dialog.attributes('-topmost', True)
-        dialog.grab_set()
-        dialog.lift()
-        dialog.focus_force()
-        
-        # Centrer la fenêtre
-        dialog.geometry("+{}+{}".format(
-            self.root.winfo_rootx() + 200,
-            self.root.winfo_rooty() + 200
-        ))
-        
-        tk.Label(dialog, text="Voulez-vous relancer la boucle ?", 
-                bg="#f0f0f0", font=("Arial", 12, "bold")).pack(pady=30)
-        
-        def on_yes():
-            result[0] = True
-            dialog.destroy()
-        
-        def on_no():
-            result[0] = False
-            dialog.destroy()
-        
-        button_frame = tk.Frame(dialog, bg="#f0f0f0")
-        button_frame.pack(pady=20)
-        
-        tk.Button(button_frame, text="Oui", command=on_yes,
-                 bg="green", fg="white", font=("Arial", 10, "bold"), width=10).pack(side=tk.LEFT, padx=20)
-        tk.Button(button_frame, text="Non", command=on_no,
-                 bg="red", fg="white", font=("Arial", 10, "bold"), width=10).pack(side=tk.LEFT, padx=20)
-        
-        dialog.bind('<Return>', lambda e: on_yes())
-        dialog.bind('<Escape>', lambda e: on_no())
-        
-        dialog.wait_window()
-        return result[0]
